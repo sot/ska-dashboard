@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 
 import Button from 'react-bootstrap/Button';
+import ToggleButton from 'react-bootstrap/ToggleButton';
 import Modal from 'react-bootstrap/Modal';
 import Table from 'react-bootstrap/Table';
+import ToggleButtonGroup from 'react-bootstrap/ToggleButtonGroup';
+import ButtonToolbar from 'react-bootstrap/ButtonToolbar';
 
 import { TbSortAscending2, TbSortDescending2 } from "react-icons/tb";
 
@@ -154,61 +157,57 @@ class FilterSelector extends React.Component<FilterSelectorProps> {
     super(props);
     this.filters = {...this.props.filters}
   }
-  
-  selected() {
-    return Object.keys(Object.fromEntries(Object.entries(this.filters).filter(([k,v]) => v)));
-  }
-    
-  toggleFilter(name: string, checked: boolean) {
-    this.filters[name] = checked
-  }
 
-  onChange(event: any) {
-    console.log(event)
-  }
-
-  save() {
-    const selected = this.selected();
-    this.props.result(selected)
-    this.props.handleClose()
-  }
-
-  cancel() {
-    this.props.handleClose()
+  onChange(group: string, filter: string[]) {
+    // console.log(`${group}: ${filter}`)
+    var res: { [key: string]: string[] } = {}
+    res[group] = filter
+    this.props.result(res)
   }
 
   render() {
     this.filters = {...this.props.filters}
-    const all_filters = Object.keys(this.props.filters)
+
+    var defaults: {[key: string]: string[]} = {}
+    for (const fg_key in this.filters) {
+      const defa = Object.keys(this.filters[fg_key].filters).filter((k) => this.filters[fg_key].filters[k].active)
+      defaults[fg_key] = defa
+    }
 
     return (
-      <Modal show={this.props.show} onHide={this.cancel.bind(this)}>
-        <Modal.Header closeButton>
-          <Modal.Title>Select filters</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
+      <>
+        <ButtonToolbar className="justify-content-center" aria-label="Toolbar with button groups">
           {
-            all_filters.map((filter: string, i: number) => 
-              <div key={i}>
-                <input
-                  type="checkbox"
-                  defaultChecked={this.props.filters[filter]}
-                  onChange={(event) => this.toggleFilter(filter, event.target.checked)}
-                />
-                {filter}
-              </div>
-            )
-          }
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={this.cancel.bind(this)}>
-            Cancel
-          </Button>
-          <Button variant="primary" onClick={this.save.bind(this)}>
-            OK
-          </Button>
-        </Modal.Footer>
-      </Modal>
+            Object.keys(this.filters).map((fg_key, fg_idx) => (
+              <ToggleButtonGroup
+              key={fg_idx}
+              className="me-3 gap-1"
+              aria-label={`${fg_key} filter group`}
+              name={fg_key}
+              type="checkbox"
+              defaultValue={defaults[fg_key]}
+              onChange={(e: any) => (this.onChange(fg_key, e))}
+              >
+              {
+
+                Object.keys(this.filters[fg_key].filters).map((f_key, f_idx) => (
+                  <ToggleButton
+                  variant="outline-dark"
+                  size="sm"
+                  key={f_idx}
+                  id={`check-${fg_idx}-${f_idx}`}
+                  defaultValue={[]}
+                  value={f_key}
+                  >
+                    {this.filters[fg_key].filters[f_key].title}
+                  </ToggleButton>
+                  )
+                )
+              }
+            </ToggleButtonGroup>
+          ))}
+        </ButtonToolbar>
+      </>
     )
   }
 }
@@ -345,6 +344,15 @@ interface ColumnSpec {
   transform?: any,
   sort?: any,
   class?: any,
+}
+
+
+function or_filters(pkg: any, functions: any) {
+  if (functions.length === 0) {
+    return true
+  }
+  return functions.map((f: any) => f(pkg))
+    .reduce((acc: boolean, res: boolean) => (acc || res), false);
 }
 
 
@@ -495,10 +503,10 @@ function App() {
 
   // the filters used are set using the same pattern as the columns
   const [show_filter_dialog, setShowFilterDialog] = useState(false)
-  const [filter_names, setFiltersState] = useState<string[]>([]);
-  function setFilters(filters: string[]) {
+  const [filter_names, setFiltersState] = useState<{ [key: string]: string[] }>({});
+  function setFilters(filters: { [key: string]: string[] }) {
     if (filters != null) {
-      setFiltersState(filters)
+      setFiltersState({...filter_names, ...filters})
     }
   }
 
@@ -511,18 +519,40 @@ function App() {
 
   // The following lines use the filter_names
   // (which are the state value that results from the filters dialog)
-  const filters = {
-    skare3: false,
-    with_pr: false,
-    with_merges: false,
-    outdated: false,
-    ...Object.fromEntries(filter_names.map(x => [x, true])),
-  }
-  const filter_functions : any = {
-    skare3: ((p: any) => p["flight"] !== ""),
-    with_pr: ((p: any) => p["pull_requests"].length > 0),
-    with_merges: ((p: any) => p["merge_info"].length > 0),
-    outdated: Outdated,
+  const filters: {[key: string]: {[key: string]: any}} = {
+    skare3: {
+      filters: {
+        yes: {
+          title: "Ska",
+          active: false,
+          function: ((p: any) => p["flight"] !== "")
+        },
+        no: {
+          title: "non-Ska",
+          active: false,
+          function: ((p: any) => p["flight"] === "")
+        },
+      },
+    },
+    devel: {
+      filters: {
+        with_pr: {
+          title: "With PRs",
+          active: false,
+          function: ((p: any) => p["pull_requests"].length > 0)
+        },
+        with_merges: {
+          title: "With Merges",
+          active: false,
+          function: ((p: any) => p["merge_info"].length > 0)
+        },
+        outdated: {
+          title: "With Releases",
+          active: false,
+          function: Outdated
+        },
+      }
+    }
   }
 
   var packages = [...package_info.packages]
@@ -534,9 +564,14 @@ function App() {
       ''
     )
   }
-
-  for (var i = 0; i < filter_names.length; ++i) {
-    packages = packages.filter(filter_functions[filter_names[i]]);
+  
+  const filter_keys = Object.keys(filter_names)
+  for (var i = 0; i < filter_keys.length; ++i) {
+    const fg_key = filter_keys[i]
+    const filter_functions = filter_names[filter_keys[i]].map(
+      (key: string) => filters[fg_key].filters[key].function
+    )
+    packages = packages.filter((pkg) => or_filters(pkg, filter_functions));
   }
 
   // console.log('package info', package_info)
@@ -545,10 +580,7 @@ function App() {
       <h1> Ska Packages </h1>
 
       {package_info['time'].substring(0, 19)} <br/>
-      <Button variant="light" onClick={() => setShowFilterDialog(true)}>
-        Filters
-      </Button>
-      <Button variant="light" onClick={() => setShowColumnDialog(true)}>
+      <Button variant="outline-dark" size="sm" onClick={() => setShowColumnDialog(true)}>
         Columns
       </Button>
 
