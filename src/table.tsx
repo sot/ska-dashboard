@@ -6,6 +6,13 @@ import { TbSortAscending2, TbSortDescending2 } from "react-icons/tb";
 
 import {Package} from './package'
 
+import { IconContext, IconType } from "react-icons";
+
+function styledIcon(Icon: IconType, style: {[key: string] : string} = { color: 'blue' }) {
+  return (
+    <IconContext.Provider value={style}> <Icon/> </IconContext.Provider>
+  );
+}
 
 function lexicographic(a: any, b: any) {
   return a.toString().localeCompare(b.toString())
