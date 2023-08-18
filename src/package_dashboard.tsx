@@ -78,7 +78,7 @@ function PackageDashboard() {
       transform: ((
         (pkg: any) => (
           pkg["pull_requests"].map((pr: any, i: number) => 
-            <p key={i}> <a href={pr["url"]}> {pr['title']}</a> </p>
+            <p key={i}> PR #{pr['number']}:  <a href={pr["url"]}> {pr['title']}</a> </p>
           )
         )
       )),
@@ -90,9 +90,9 @@ function PackageDashboard() {
       transform: ((pkg: any) =>
         pkg["merge_info"].map((pr: any, i: number) =>
           <p key={i}>
-            {pr['title']}
-            <a href={"http://github.com/"+pkg["owner"]+"/"+pkg["name"]+"/pull/"+pr['pr_number']}>
-              PR #{pr['pr_number']}
+            PR #{pr['pr_number']}: <a
+            href={"http://github.com/"+pkg["owner"]+"/"+pkg["name"]+"/pull/"+pr['pr_number']}>
+              {pr['title']}
             </a>
           </p>
         )

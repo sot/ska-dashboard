@@ -88,7 +88,7 @@ function Table(props: any) {
 
   return (
     <div>
-      <BootstrapTable bordered hover>
+      <BootstrapTable bordered hover className="text-start">
         <thead>
           <tr>
           {props.show_columns.map((col: string, j: number) => <th  key={j} onClick={(event) => setSortColumn(col, event)}>{column_specs[col].title}
