@@ -40,13 +40,11 @@ export interface ColumnSpec {
     sort?: any,
     class?: any,
 }
-  
 
-function Table(props: any) {
-  const [sort, setSort] = React.useState<any>({column: null, reverse: false})
 
-  const column_specs : { [key: string]: ColumnSpec } = props.column_specs  
-  for (const value of Object.values(column_specs)) {
+function normalize_column_specs(column_specs: { [key: string]: ColumnSpec }) {
+  const norm_column_specs : { [key: string]: ColumnSpec } = column_specs  
+  for (const value of Object.values(norm_column_specs)) {
     if (value.title == null) {
       value.title = value.name
     }
@@ -60,22 +58,43 @@ function Table(props: any) {
       value.class = ((pkg : Package) => 'table-default')
     }
   }
+  return norm_column_specs
+}
+
+
+function Row(props: any) {
+  const cells = props.show_columns.map((col: string, j: number) =>
+    <td key={j} className={props.column_specs[col].class(props.data)}>
+      {props.column_specs[col].transform(props.data)}
+    </td>
+  )
+  var rows = (<tr>{cells}</tr>)
+  return rows
+}
+
+
+function Rows(props: any) {
 
   var raw_data = props.data  // do I need to make a copy so I can edit it?
-  if (sort.column != null) {
-    raw_data = raw_data.sort(compare(sort.column, sort.reverse, column_specs[sort.column].sort))
+  if (props.sort.column != null) {
+    raw_data = raw_data.sort(
+      compare(props.sort.column, props.sort.reverse, props.column_specs[props.sort.column].sort)
+    )
   }
 
-  const data = raw_data.map((pkg: any) => (
-    Object.fromEntries(Object.entries(column_specs).map(([k, v], i) =>
-    [
-      k,
-      {
-        value: v.transform(pkg),
-        class: v.class(pkg),
-      }
-    ]))
-  ))
+  return (
+    <>
+      {raw_data.map((pkg: any, i: number) =>
+      <Row key={i} column_specs={props.column_specs} data={pkg} show_columns={props.show_columns}/>)}
+    </>
+    )
+}
+  
+
+function Table(props: any) {
+  const [sort, setSort] = React.useState<any>({column: null, reverse: false})
+
+  const column_specs = normalize_column_specs(props.column_specs)
 
   function setSortColumn(col: string, event: any) {
     if (col === sort.column) {
@@ -97,13 +116,12 @@ function Table(props: any) {
           </tr>
         </thead>
         <tbody>
-        {data.map((pkg: any, i: number) =>
-          <tr key={i}>
-            {
-              props.show_columns.map((col: string, j: number) =>
-              <td key={j} className={pkg[col].class}>{pkg[col].value}</td>)
-            }
-          </tr>)}
+          <Rows
+            data={props.data}
+            column_specs={column_specs}
+            show_columns={props.show_columns}
+            sort={sort}
+          />
         </tbody>
       </BootstrapTable>
     </div>
