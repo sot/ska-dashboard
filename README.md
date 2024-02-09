@@ -4,6 +4,12 @@ Dashboard for Ska package management
 
 ## Getting Started 
 
+Make an environment for NPM:
+```
+conda create -y -n npm -c conda-forge nodejs
+conda activate npm
+```
+
 Within this directory:
 ```
 npm install
