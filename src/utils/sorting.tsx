@@ -1,5 +1,4 @@
-var semver = require('semver');
-
+import semver from 'semver';
 
 export function lexicographic_sort(a: any, b: any) {
   console.log('lexicographic sort', a, b)
